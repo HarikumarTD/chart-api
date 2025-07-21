@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: chart-api
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: "python3 main.py"
+    envVars:
+      - key: PORT
+        value: 10000
