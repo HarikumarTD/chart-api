@@ -20,33 +20,38 @@ def chart():
     try:
         data = yf.download(symbol, period="5d", interval="1d")
 
-        if data.empty:
-            return jsonify({"status": "error", "message": "No data returned for symbol."})
+        # 🐞 Debug log: Return columns if missing
+        expected_cols = ["Open", "High", "Low", "Close"]
+        actual_cols = data.columns.tolist()
+        missing = [col for col in expected_cols if col not in actual_cols]
+        if missing:
+            return jsonify({
+                "status": "error",
+                "message": f"Missing columns: {', '.join(missing)}",
+                "columns_received": actual_cols
+            })
 
-        # Ensure required columns exist
-        required_columns = ["Open", "High", "Low", "Close"]
-        for col in required_columns:
-            if col not in data.columns:
-                return jsonify({"status": "error", "message": f"Missing column '{col}' in data."})
+        # 🧼 Ensure numeric types
+        for col in expected_cols:
+            data[col] = pd.to_numeric(data[col], errors="coerce")
+            if data[col].isnull().any():
+                return jsonify({"status": "error", "message": f"Column '{col}' contains non-numeric values."})
 
-        # Convert to numeric and drop rows with invalid values
-        data[required_columns] = data[required_columns].apply(pd.to_numeric, errors='coerce')
-        data.dropna(subset=required_columns, inplace=True)
+        # 🧠 Make sure index is datetime (for mplfinance)
+        data.index = pd.to_datetime(data.index)
 
-        if data.empty:
-            return jsonify({"status": "error", "message": "Cleaned data is empty. Symbol might be invalid or corrupted."})
-
-        # Generate the chart
+        # 🖼️ Generate chart
         fig, _ = mpf.plot(data, type='candle', style='charles', returnfig=True)
         buf = io.BytesIO()
-        fig.savefig(buf, format='png')
+        fig.savefig(buf, format="png")
         buf.seek(0)
-        base64_img = base64.b64encode(buf.read()).decode('utf-8')
+        base64_img = base64.b64encode(buf.read()).decode("utf-8")
 
         return jsonify({"status": "success", "chart": base64_img})
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=10000)
