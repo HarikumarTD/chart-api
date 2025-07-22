@@ -19,6 +19,8 @@ def chart():
     try:
         data = yf.download(symbol, period="5d", interval="1d")
         if data.empty or not all(data[col].dtype.kind in "fi" for col in ["Open", "High", "Low", "Close"]):
+
+
             return jsonify({"status": "error", "message": "Invalid data received."})
 
         fig, _ = mpf.plot(data, type='candle', style='charles', returnfig=True)
