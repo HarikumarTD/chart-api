@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import yfinance as yf
 import mplfinance as mpf
+import pandas as pd
 import io
 import base64
 
