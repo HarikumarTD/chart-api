@@ -18,10 +18,13 @@ def chart():
 
     try:
         data = yf.download(symbol, period="5d", interval="1d")
-        if data.empty or not all(data[col].dtype.kind in "fi" for col in ["Open", "High", "Low", "Close"]):
 
+        required_columns = ["Open", "High", "Low", "Close"]
+        if data.empty or not all(col in data.columns for col in required_columns):
+            return jsonify({"status": "error", "message": "Required OHLC data missing."})
 
-            return jsonify({"status": "error", "message": "Invalid data received."})
+        if not all(pd.api.types.is_numeric_dtype(data[col]) for col in required_columns):
+            return jsonify({"status": "error", "message": "Data must be numeric type."})
 
         fig, _ = mpf.plot(data, type='candle', style='charles', returnfig=True)
         buf = io.BytesIO()
@@ -31,6 +34,7 @@ def chart():
         return jsonify({"status": "success", "chart": base64_img})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
