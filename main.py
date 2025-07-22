@@ -20,6 +20,10 @@ def chart():
     try:
         data = yf.download(symbol, period="5d", interval="1d")
 
+        # 🔓 Fix: Flatten MultiIndex columns if present
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.get_level_values(0)
+
         # 🐞 Debug log: Return columns if missing
         expected_cols = ["Open", "High", "Low", "Close"]
         actual_cols = data.columns.tolist()
@@ -37,10 +41,10 @@ def chart():
             if data[col].isnull().any():
                 return jsonify({"status": "error", "message": f"Column '{col}' contains non-numeric values."})
 
-        # 🧠 Make sure index is datetime (for mplfinance)
+        # 🧠 Make sure index is datetime
         data.index = pd.to_datetime(data.index)
 
-        # 🖼️ Generate chart
+        # 📈 Generate chart
         fig, _ = mpf.plot(data, type='candle', style='charles', returnfig=True)
         buf = io.BytesIO()
         fig.savefig(buf, format="png")
@@ -51,7 +55,6 @@ def chart():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
-
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=10000)
